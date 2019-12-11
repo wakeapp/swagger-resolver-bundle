@@ -1,3 +1,7 @@
+## [0.4.4] - 2019-12-11
+### Changed
+- Improved performance of `SwaggerCachedConfiguration`.
+
 ## [0.4.3] - 2019-09-23
 ### Fixed
 - Fixed rewriting `mapPathToRouteName` keys in `AbstractSwaggerConfigurationLoader`.
