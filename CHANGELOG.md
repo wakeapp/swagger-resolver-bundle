@@ -1,3 +1,7 @@
+## [0.4.5] - 2019-12-11
+### Fixed
+- Fixed priority of normalizers and validators.
+
 ## [0.4.4] - 2019-12-11
 ### Changed
 - Improved performance of `SwaggerCachedConfiguration`.
