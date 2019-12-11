@@ -6,7 +6,6 @@ namespace Linkin\Bundle\SwaggerResolverBundle\Configuration;
 
 use EXSyst\Component\Swagger\Path;
 use EXSyst\Component\Swagger\Schema;
-use Linkin\Bundle\SwaggerResolverBundle\Configuration\SwaggerConfiguration;
 use Linkin\Bundle\SwaggerResolverBundle\Loader\SwaggerConfigurationLoaderInterface;
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
