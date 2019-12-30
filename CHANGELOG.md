@@ -1,3 +1,7 @@
+## [0.4.6] - 2019-12-30
+### Fixed
+- Fixed deprecations for Symfony
+
 ## [0.4.5] - 2019-12-11
 ### Fixed
 - Fixed priority of normalizers and validators.
