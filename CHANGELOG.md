@@ -1,3 +1,7 @@
+## [0.4.8] - 2020-09-04
+### Fixed
+- Added support of `symfony/option-resolver` with version `>=5.0`
+
 ## [0.4.7] - 2020-09-04
 ### Patch
 - Added Symfony 5 support
