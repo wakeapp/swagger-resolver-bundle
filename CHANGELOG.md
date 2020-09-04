@@ -1,3 +1,7 @@
+## [0.4.7] - 2020-09-04
+### Patch
+- Added Symfony 5 support
+
 ## [0.4.6] - 2019-12-30
 ### Fixed
 - Fixed deprecations for Symfony
