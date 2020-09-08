@@ -1,3 +1,7 @@
+## [0.4.9] - 2020-09-08
+### Fixed
+- Fix of empty required option in `AbstractMergeStrategy`
+
 ## [0.4.8] - 2020-09-04
 ### Fixed
 - Added support of `symfony/option-resolver` with version `>=5.0`
