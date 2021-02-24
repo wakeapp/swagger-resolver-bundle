@@ -1,3 +1,7 @@
+## [Unreleased]
+### Added
+- Support PHP ~8.0
+
 ## [0.4.9] - 2020-09-08
 ### Fixed
 - Fix of empty required option in `AbstractMergeStrategy`
