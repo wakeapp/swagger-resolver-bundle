@@ -1,4 +1,6 @@
 ## [Unreleased]
+
+## [0.4.10] - 2021-02-24
 ### Added
 - Support PHP ~8.0
 
