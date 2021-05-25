@@ -7,11 +7,15 @@ namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 use EXSyst\Component\Swagger\Operation;
 use EXSyst\Component\Swagger\Parameter;
 use EXSyst\Component\Swagger\Path;
+use EXSyst\Component\Swagger\Schema;
 use EXSyst\Component\Swagger\Swagger;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\PathNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
+use OpenApi\Annotations\OpenApi;
+use OpenApi\Annotations\PathItem;
+use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\Routing\RouterInterface;
 use function end;
 use function explode;
@@ -80,9 +84,9 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
     /**
      * Load full configuration and returns Swagger object
      *
-     * @return Swagger
+     * @return OpenApi
      */
-    abstract protected function loadConfiguration(): Swagger;
+    abstract protected function loadConfiguration(): OpenApi;
 
     /**
      * Add file resources for swagger definitions
@@ -142,38 +146,12 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
         $definitionCollection = new SchemaDefinitionCollection();
         $operationCollection = new SchemaOperationCollection();
 
-        foreach ($swaggerConfiguration->getDefinitions()->getIterator() as $definitionName => $definition) {
-            $definitionCollection->addSchema($definitionName, $definition);
-        }
+        $definitionCollection->addSchema('default', new Schema([]));
 
         $this->registerDefinitionResources($definitionCollection);
 
-        /** @var Path $pathObject */
-        foreach ($swaggerConfiguration->getPaths()->getIterator() as $path => $pathObject) {
-            /** @var Operation $operation */
-            foreach ($pathObject->getOperations() as $method => $operation) {
-                $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
-                $schema = $this->parameterMerger->merge($operation, $swaggerConfiguration->getDefinitions());
-                $operationCollection->addSchema($routeName, $method, $schema);
-
-                /** @var Parameter $parameter */
-                foreach ($operation->getParameters()->getIterator() as $name => $parameter) {
-                    $ref = $parameter->getSchema()->getRef();
-
-                    if (!$ref) {
-                        continue;
-                    }
-
-                    $explodedName = explode('/', $ref);
-                    $definitionName = end($explodedName);
-
-                    foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
-                        $operationCollection->addSchemaResource($routeName, $fileResource);
-                    }
-                }
-            }
-        }
-
+        $operationCollection->addSchema('/', 'get', new Schema([]));
+        $operationCollection->addSchemaResource('/', new FileResource(''));
         $this->registerOperationResources($operationCollection);
 
         $this->definitionCollection = $definitionCollection;
