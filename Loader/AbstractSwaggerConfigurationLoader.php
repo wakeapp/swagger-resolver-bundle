@@ -13,6 +13,7 @@ use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\PathNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
+use OpenApi\Analysis;
 use OpenApi\Annotations\OpenApi;
 use OpenApi\Annotations\PathItem;
 use Symfony\Component\Config\Resource\FileResource;
@@ -146,16 +147,7 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
         $definitionCollection = new SchemaDefinitionCollection();
         $operationCollection = new SchemaOperationCollection();
 
-        $analysis = $swaggerConfiguration->_analysis;
-        $definitions = [
-            'classes' => $analysis->classes,
-            'interfaces' => $analysis->interfaces,
-            'traits' => $analysis->traits,
-        ];
-
-        foreach ($definitions as $name => $definition) {
-            $definitionCollection->addSchema($name, new Schema($definition));
-        }
+        $definitionCollection->addSchema('test', new Schema([]));
 
         $this->registerDefinitionResources($definitionCollection);
 
