@@ -146,7 +146,16 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
         $definitionCollection = new SchemaDefinitionCollection();
         $operationCollection = new SchemaOperationCollection();
 
-        $definitionCollection->addSchema('default', new Schema([]));
+        $analysis = $swaggerConfiguration->_analysis;
+        $definitions = [
+            'classes' => $analysis->classes,
+            'interfaces' => $analysis->interfaces,
+            'traits' => $analysis->traits,
+        ];
+
+        foreach ($definitions as $name => $definition) {
+            $definitionCollection->addSchema($name, new Schema($definition));
+        }
 
         $this->registerDefinitionResources($definitionCollection);
 
