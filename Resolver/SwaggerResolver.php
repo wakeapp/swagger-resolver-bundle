@@ -53,13 +53,17 @@ class SwaggerResolver extends OptionsResolver
         $resolvedValue = parent::offsetGet($option, $triggerDeprecation);
         $property = $this->schema->getProperties()->get($option);
 
-        foreach ($this->validators as $validator) {
-            if ($validator->supports($property)) {
-                $validator->validate($property, $option, $resolvedValue);
+        if ($this->validators) {
+            foreach ($this->validators as $validator) {
+                if ($validator->supports($property)) {
+                    $validator->validate($property, $option, $resolvedValue);
+                }
             }
+
+            return $resolvedValue;
         }
 
-        return $resolvedValue;
+        return [];
     }
 
     /**

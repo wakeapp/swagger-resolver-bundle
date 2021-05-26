@@ -154,6 +154,32 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
             $definitionCollection->addSchema($schema->schema, $this->serializeOpenApiSchemaToEXSystSchema($schema));
         }
 
+        foreach ($swaggerConfiguration->paths as $path => $pathObject) {
+            dd($path, $pathObject);
+            /** @var Operation $operation */
+            foreach ($pathObject->getOperations() as $method => $operation) {
+                $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
+                $schema = $this->parameterMerger->merge($operation, $swaggerConfiguration->getDefinitions());
+                $operationCollection->addSchema($routeName, $method, $schema);
+
+                /** @var Parameter $parameter */
+                foreach ($operation->getParameters()->getIterator() as $name => $parameter) {
+                    $ref = $parameter->getSchema()->getRef();
+
+                    if (!$ref) {
+                        continue;
+                    }
+
+                    $explodedName = explode('/', $ref);
+                    $definitionName = end($explodedName);
+
+                    foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
+                        $operationCollection->addSchemaResource($routeName, $fileResource);
+                    }
+                }
+            }
+        }
+
 //        foreach ($swaggerConfiguration->get`Definitions()->getIterator() as $definitionName => $definition) {
 //            $definitionCollection->addSchema($definitionName, $definition);
 //        }
@@ -205,12 +231,17 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
     {
         $eXSystSchema = new EXSystSchema();
 
-        $eXSystSchema->setDiscriminator($schema->discriminator);
-        $eXSystSchema->setReadOnly($schema->readOnly);
-        $eXSystSchema->setTitle($schema->title);
-        $eXSystSchema->setExample($schema->example);
-        $eXSystSchema->setRequired($schema->required);
+        $eXSystSchema->setDiscriminator($this->setNullOpenApiSchemeProperty($schema->discriminator));
+        $eXSystSchema->setReadOnly($this->setNullOpenApiSchemeProperty($schema->readOnly));
+        $eXSystSchema->setTitle($this->setNullOpenApiSchemeProperty($schema->title));
+        $eXSystSchema->setExample($this->setNullOpenApiSchemeProperty($schema->example));
+        $eXSystSchema->setRequired($this->setNullOpenApiSchemeProperty($schema->required));
 
         return $eXSystSchema;
+    }
+
+    private function setNullOpenApiSchemeProperty($property)
+    {
+        return $property === '@OA\Generator::UNDEFINED🙈' ? null : $property;
     }
 }
