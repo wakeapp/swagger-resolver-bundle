@@ -192,46 +192,8 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
             }
         }
 
-//        foreach ($swaggerConfiguration->get`Definitions()->getIterator() as $definitionName => $definition) {
-//            $definitionCollection->addSchema($definitionName, $definition);
-//        }
-//
-//        $this->registerDefinitionResources($definitionCollection);
-//
-//        /** @var Path $pathObject */
-//        foreach ($swaggerConfiguration->getPaths()->getIterator() as $path => $pathObject) {
-//            /** @var Operation $operation */
-//            foreach ($pathObject->getOperations() as $method => $operation) {
-//                $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
-//                $schema = $this->parameterMerger->merge($operation, $swaggerConfiguration->getDefinitions());
-//                $operationCollection->addSchema($routeName, $method, $schema);
-//
-//                /** @var Parameter $parameter */
-//                foreach ($operation->getParameters()->getIterator() as $name => $parameter) {
-//                    $ref = $parameter->getSchema()->getRef();
-//
-//                    if (!$ref) {
-//                        continue;
-//                    }
-//
-//                    $explodedName = explode('/', $ref);
-//                    $definitionName = end($explodedName);
-//
-//                    foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
-//                        $operationCollection->addSchemaResource($routeName, $fileResource);
-//                    }
-//                }
-//            }
-//        }
-//
-//        $this->registerOperationResources($operationCollection);
-//
-//        $this->definitionCollection = $definitionCollection;
-//        $this->operationCollection = $operationCollection;
-
         $this->registerDefinitionResources($definitionCollection);
 
-//        $operationCollection->addSchema('/', 'get', new Schema([]));
         $operationCollection->addSchemaResource('/', new FileResource(''));
         $this->registerOperationResources($operationCollection);
 
