@@ -7,7 +7,8 @@ namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 use EXSyst\Component\Swagger\Operation;
 use EXSyst\Component\Swagger\Parameter;
 use EXSyst\Component\Swagger\Path;
-use EXSyst\Component\Swagger\Schema;
+use EXSyst\Component\Swagger\Schema as EXSystSchema;
+use OpenApi\Annotations\Schema as OpenApiSchema;
 use EXSyst\Component\Swagger\Swagger;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
@@ -150,17 +151,7 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
         /** @var \OpenApi\Annotations\Schema $schema */
         foreach ($swaggerConfiguration->components->schemas as $schema) {
-            var_dump($schema, '\n');    
-            $definitionCollection->addSchema($schema->schema, new Schema([
-                'discriminator' => $schema->discriminator,
-                'readOnly' => $schema->readOnly,
-                'title' => $schema->title,
-                'example' => $schema->example,
-                'required' => $schema->required,
-                'properties' => $schema->properties,
-                'allOf' => $schema->allOf,
-                'additionalProperties' => $schema->additionalProperties,
-            ]));
+            $definitionCollection->addSchema($schema->schema, $this->serializeOpenApiSchemaToEXSystSchema($schema));
         }
 
 //        foreach ($swaggerConfiguration->get`Definitions()->getIterator() as $definitionName => $definition) {
@@ -208,5 +199,18 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
         $this->definitionCollection = $definitionCollection;
         $this->operationCollection = $operationCollection;
+    }
+
+    private function serializeOpenApiSchemaToEXSystSchema(OpenApiSchema $schema): EXSystSchema
+    {
+        $eXSystSchema = new EXSystSchema();
+
+        $eXSystSchema->setDiscriminator($schema->discriminator);
+        $eXSystSchema->setReadOnly($schema->readOnly);
+        $eXSystSchema->setTitle($schema->title);
+        $eXSystSchema->setExample($schema->example);
+        $eXSystSchema->setRequired($schema->required);
+
+        return $eXSystSchema;
     }
 }
