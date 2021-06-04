@@ -124,7 +124,7 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
      * @return string
      */
     protected function getRouteNameByPath(string $path): string
-    {;
+    {
         if (empty($this->mapPathToRouteName)) {
             foreach ($this->router->getRouteCollection() as $routeName => $route) {
                 foreach ($route->getMethods() as $method) {
@@ -154,7 +154,7 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
         $definitionCollection = new SchemaDefinitionCollection();
         $operationCollection = new SchemaOperationCollection();
 
-        $methods = ['get', 'post', 'put', 'delete', 'options', 'patch'];
+        $methodList = ['get', 'post', 'put', 'delete', 'options', 'patch'];
 
         /** @var \OpenApi\Annotations\Schema $schema */
         foreach ($swaggerConfiguration->components->schemas as $schema) {
@@ -166,26 +166,29 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
             $path = $pathObject->path;
 
             /** @var OpenApiOperation $operation */
-            foreach ($pathObject as $method => $operation) {
-                if (array_search($method, $methods) && $operation !== self::SCHEMA_UNDEFINED) {
-                    $eXSystOperation = $this->serializeOpenApiOperationToEXSystOperation($operation);
-                    $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
-                    $schema = $this->parameterMerger->merge($eXSystOperation, new Definitions());
-                    $operationCollection->addSchema($routeName, $method, $schema);
+            foreach ($pathObject as $methodKey => $operation) {
+                foreach ($methodList as $method) {
+                    if ($methodKey === $method && gettype($operation) !== 'string') {
+                        $eXSystOperation = $this->serializeOpenApiOperationToEXSystOperation($operation);
+                        $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($methodKey), $path));
 
-                    /** @var Parameter $parameter */
-                    foreach ($eXSystOperation->getParameters()->getIterator() as $name => $parameter) {
-                        $ref = $parameter->getSchema()->getRef();
+                        $schema = $this->parameterMerger->merge($eXSystOperation, new Definitions());
+                        $operationCollection->addSchema($routeName, $method, $schema);
 
-                        if (!$ref) {
-                            continue;
-                        }
+                        /** @var Parameter $parameter */
+                        foreach ($eXSystOperation->getParameters()->getIterator() as $name => $parameter) {
+                            $ref = $parameter->getSchema()->getRef();
 
-                        $explodedName = explode('/', $ref);
-                        $definitionName = end($explodedName);
+                            if (!$ref) {
+                                continue;
+                            }ƒ
 
-                        foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
-                            $operationCollection->addSchemaResource($routeName, $fileResource);
+                            $explodedName = explode('/', $ref);
+                            $definitionName = end($explodedName);
+
+                            foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
+                                $operationCollection->addSchemaResource($routeName, $fileResource);
+                            }
                         }
                     }
                 }
