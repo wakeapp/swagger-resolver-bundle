@@ -181,7 +181,7 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
                             if (!$ref) {
                                 continue;
-                            }ƒ
+                            }
 
                             $explodedName = explode('/', $ref);
                             $definitionName = end($explodedName);
