@@ -7,6 +7,7 @@ namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 use EXSyst\Component\Swagger\Swagger;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
 use Nelmio\ApiDocBundle\ApiDocGenerator;
+use OpenApi\Annotations\OpenApi;
 use Symfony\Component\Routing\RouterInterface;
 
 class NelmioApiDocConfigurationLoader extends AbstractAnnotationConfigurationLoader
@@ -31,9 +32,10 @@ class NelmioApiDocConfigurationLoader extends AbstractAnnotationConfigurationLoa
     }
 
     /**
+     * Test
      * {@inheritdoc}
      */
-    protected function loadConfiguration(): Swagger
+    protected function loadConfiguration(): OpenApi
     {
         return $this->apiDocGenerator->generate();
     }
