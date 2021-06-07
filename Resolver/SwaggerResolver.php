@@ -63,7 +63,7 @@ class SwaggerResolver extends OptionsResolver
             return $resolvedValue;
         }
 
-        return [];
+        return $resolvedValue ?? null;
     }
 
     /**
