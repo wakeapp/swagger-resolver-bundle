@@ -10,7 +10,6 @@ use OpenApi\Annotations\Operation as OpenApiOperation;
 use EXSyst\Component\Swagger\Parameter;
 use EXSyst\Component\Swagger\Path;
 use EXSyst\Component\Swagger\Schema as EXSystSchema;
-use OpenApi\Annotations\Schema;
 use OpenApi\Annotations\Schema as OpenApiSchema;
 use EXSyst\Component\Swagger\Swagger;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
@@ -156,7 +155,7 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
         $methodList = ['get', 'post', 'put', 'delete', 'options', 'patch'];
 
-        /** @var \OpenApi\Annotations\Schema $schema */
+        /** @var OpenApiSchema $schema */
         foreach ($swaggerConfiguration->components->schemas as $schema) {
             $definitionCollection->addSchema($schema->schema, $this->serializeOpenApiSchemaToEXSystSchema($schema));
         }
