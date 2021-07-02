@@ -11,10 +11,10 @@ interface MergeStrategyInterface
      *
      * @param string $parameterSource
      * @param string $name
-     * @param array $data
+     * @param object $data
      * @param bool $isRequired
      */
-    public function addParameter(string $parameterSource, string $name, array $data, bool $isRequired);
+    public function addParameter(string $parameterSource, string $name, object $data, bool $isRequired);
 
     /**
      * Returns list of collected parameters

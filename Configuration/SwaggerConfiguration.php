@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Configuration;
 
-use EXSyst\Component\Swagger\Schema;
+use OpenApi\Annotations\Schema;
 use Linkin\Bundle\SwaggerResolverBundle\Loader\SwaggerConfigurationLoaderInterface;
 
 class SwaggerConfiguration implements SwaggerConfigurationInterface

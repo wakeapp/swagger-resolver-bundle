@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Validator;
 
-use EXSyst\Component\Swagger\Schema;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Annotations\Property;
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterTypeEnum;
+use OpenApi\Generator;
 use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
+
 use function in_array;
 use function is_int;
 use function sprintf;
@@ -16,25 +19,29 @@ class NumberMultipleOfValidator implements SwaggerValidatorInterface
     /**
      * {@inheritdoc}
      */
-    public function supports(Schema $property, array $context = []): bool
+    public function supports(object $property, array $context = []): bool
     {
-        return in_array($property->getType(), [ParameterTypeEnum::NUMBER, ParameterTypeEnum::INTEGER], true)
-            && null !== $property->getMultipleOf()
+        $propertyType = $property instanceof Parameter ? $property->schema->type : $property->type;
+        $propertyMultipleOf = $property instanceof Parameter ? $property->schema->multipleOf : $property->multipleOf;
+
+        return in_array($propertyType, [ParameterTypeEnum::NUMBER, ParameterTypeEnum::INTEGER], true)
+            && Generator::UNDEFINED !== $propertyMultipleOf
         ;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function validate(Schema $property, string $propertyName, $value): void
+    public function validate(object $property, string $propertyName, $value): void
     {
-        $divisionResult = $value / $property->getMultipleOf();
+        $propertyMultipleOf = $property instanceof Parameter ? $property->schema->multipleOf : $property->multipleOf;
+        $divisionResult = $value / $propertyMultipleOf;
 
         if (!is_int($divisionResult)) {
             throw new InvalidOptionsException(sprintf(
                 'Property "%s" should be an integer after division by %s',
                 $propertyName,
-                $property->getMultipleOf()
+                $propertyMultipleOf
             ));
         }
     }

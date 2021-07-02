@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Merger;
 
-use EXSyst\Component\Swagger\Collections\Definitions;
-use EXSyst\Component\Swagger\Operation;
-use EXSyst\Component\Swagger\Parameter;
-use EXSyst\Component\Swagger\Schema;
+use JsonException;
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterLocationEnum;
+use OpenApi\Annotations\MediaType;
+use OpenApi\Annotations\Operation;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Annotations\RequestBody;
+use OpenApi\Annotations\Schema;
+use OpenApi\Generator;
+
 use function array_flip;
-use function end;
-use function explode;
 
 class OperationParameterMerger
 {
@@ -29,79 +31,94 @@ class OperationParameterMerger
     }
 
     /**
-     * @param Operation $swaggerOperation
-     * @param Definitions $definitions
+     * @param Operation $openApiOperation
+     * @param iterable $definitions
      *
      * @return Schema
+     * @throws JsonException
      */
-    public function merge(Operation $swaggerOperation, Definitions $definitions): Schema
+    public function merge(Operation $openApiOperation, iterable $definitions): Schema
     {
-        /** @var Parameter $parameter */
-        foreach ($swaggerOperation->getParameters() as $parameter) {
-            if ($parameter->getIn() !== ParameterLocationEnum::IN_BODY) {
+        /** @var RequestBody $requestBody */
+        $requestBody = $openApiOperation->requestBody === Generator::UNDEFINED ? null : $openApiOperation->requestBody;
+
+        /** @var Parameter[] $parameterList */
+        $parameterList = $openApiOperation->parameters === Generator::UNDEFINED ? null : $openApiOperation->parameters;
+
+        if ($parameterList) {
+            foreach ($parameterList as $parameter) {
+                $required = $parameter->required === Generator::UNDEFINED ? false : $parameter->required;
+
                 $this->mergeStrategy->addParameter(
-                    $parameter->getIn(),
-                    $parameter->getName(),
-                    $parameter->toArray() + ['title' => $parameter->getIn()],
-                    $parameter->getRequired() === true
+                    $parameter->in,
+                    $parameter->name,
+                    $parameter,
+                    $required === true
                 );
-
-                continue;
             }
-
-            $parameterSchema = $parameter->getSchema();
-
-            $ref = $parameterSchema->getRef();
-
-            // body as reference
-            if ($ref) {
-                $explodedName = explode('/', $ref);
-                $definitionName = end($explodedName);
-
-                $refDefinition = $definitions->get($definitionName);
-                $required = $refDefinition->getRequired() ?? [];
-                $required = array_flip($required);
-
-                foreach ($refDefinition->getProperties() as $defName => $defItem) {
-                    $this->mergeStrategy->addParameter(
-                        $parameter->getIn(),
-                        $defName,
-                        $defItem->toArray() + ['title' => $parameter->getIn()],
-                        isset($required[$defName])
-                    );
-                }
-
-                continue;
-            }
-
-            // body as object
-            if ($parameterSchema->getType() === 'object') {
-                $required = $parameterSchema->getRequired() ?? [];
-                $required = array_flip($required);
-
-                foreach ($parameterSchema->getProperties() as $bodyItemName => $currentBodyItem) {
-                    $this->mergeStrategy->addParameter(
-                        $parameter->getIn(),
-                        $bodyItemName,
-                        $currentBodyItem->toArray() + ['title' => $parameter->getIn()],
-                        isset($required[$bodyItemName])
-                    );
-                }
-
-                continue;
-            }
-
-            // body as scalar
-            $this->mergeStrategy->addParameter(
-                $parameter->getIn(),
-                $parameter->getName(),
-                $parameterSchema->toArray() + ['title' => $parameter->getIn()],
-                $parameter->getRequired() === true
-            );
         }
 
-        $mergedSchema = new Schema();
-        $mergedSchema->merge([
+        if ($requestBody) {
+            $contentList = $requestBody->content === Generator::UNDEFINED ? [] : $requestBody->content;
+
+            /** @var MediaType $mediaType */
+            foreach ($contentList as $mediaType) {
+                $schema = $mediaType->schema;
+                $ref = $schema->ref === Generator::UNDEFINED ? null : $schema->ref;
+
+                // body as reference
+                if ($ref) {
+                    $explodedName = explode('/', $ref);
+                    $definitionName = end($explodedName);
+
+                    if (!isset($definitions[$definitionName])) {
+                        $definitions[$definitionName] = new Schema([]);
+                    }
+
+                    $refDefinition = $definitions[$definitionName];
+                    $requiredList = $refDefinition->required === Generator::UNDEFINED ? [] : $refDefinition->required;
+                    $requiredList = array_flip($requiredList);
+
+                    foreach ($refDefinition->properties as $property) {
+                        $property->title = ParameterLocationEnum::IN_BODY;
+                        $this->mergeStrategy->addParameter(
+                            ParameterLocationEnum::IN_BODY,
+                            $property->property,
+                            $property,
+                            isset($requiredList[$property->property])
+                        );
+                    }
+                }
+
+                // body as any mediaType
+                if (!$ref && $mediaType) {
+                    $requiredList = [];
+
+                    foreach ($schema->properties as $property) {
+                        $required = !($property->required === Generator::UNDEFINED) && $property->required;
+
+                        if ($required) {
+                            $requiredList[] = $property->property;
+                        }
+                    }
+
+                    $requiredList = array_flip($requiredList);
+
+                    foreach ($schema->properties as $property) {
+                        $property->title = ParameterLocationEnum::IN_BODY;
+
+                        $this->mergeStrategy->addParameter(
+                            ParameterLocationEnum::IN_BODY,
+                            $property->property,
+                            $property,
+                            isset($requiredList[$property->property])
+                        );
+                    }
+                }
+            }
+        }
+
+        $mergedSchema = new Schema([
             'type' => 'object',
             'properties' => $this->mergeStrategy->getParameters(),
             'required' => $this->mergeStrategy->getRequired(),

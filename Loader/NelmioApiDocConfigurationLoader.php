@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 
-use EXSyst\Component\Swagger\Swagger;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
 use Nelmio\ApiDocBundle\ApiDocGenerator;
 use OpenApi\Annotations\OpenApi;
@@ -32,7 +31,6 @@ class NelmioApiDocConfigurationLoader extends AbstractAnnotationConfigurationLoa
     }
 
     /**
-     * Test
      * {@inheritdoc}
      */
     protected function loadConfiguration(): OpenApi

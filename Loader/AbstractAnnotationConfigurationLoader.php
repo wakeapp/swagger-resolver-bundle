@@ -6,12 +6,10 @@ namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
-use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\Config\Resource\FileResource;
-use Symfony\Component\Routing\Route;
-use Symfony\Component\Routing\RouterInterface;
+
 use function end;
 use function explode;
 use function get_declared_classes;

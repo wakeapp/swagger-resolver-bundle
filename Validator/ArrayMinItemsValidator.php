@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Validator;
 
-use EXSyst\Component\Swagger\Schema;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Annotations\Property;
+use OpenApi\Generator;
 use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
+
 use function count;
 use function sprintf;
 
@@ -14,23 +17,31 @@ class ArrayMinItemsValidator extends AbstractArrayValidator
     /**
      * {@inheritdoc}
      */
-    public function supports(Schema $property, array $context = []): bool
+    public function supports(object $property, array $context = []): bool
     {
-        return parent::supports($property, $context) && null !== $property->getMinItems();
+        $propertyMinItems = $property instanceof Parameter ? $property->schema->minItems : $property->minItems;
+
+        return parent::supports($property, $context) && Generator::UNDEFINED !== $propertyMinItems;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function validate(Schema $property, string $propertyName, $value): void
+    public function validate(object $property, string $propertyName, $value): void
     {
-        $value = $this->convertValueToArray($propertyName, $value, $property->getCollectionFormat());
+        $propertyCollectionFormat = $property instanceof Parameter ?
+            $property->schema->collectionFormat :
+            $property->collectionFormat
+        ;
 
-        if (count($value) < $property->getMinItems()) {
+        $value = $this->convertValueToArray($propertyName, $value, $propertyCollectionFormat);
+        $propertyMinItems = $property instanceof Parameter ? $property->schema->minItems : $property->minItems;
+
+        if (count($value) < $propertyMinItems) {
             throw new InvalidOptionsException(sprintf(
                 'Property "%s" should have %s items or more',
                 $propertyName,
-                $property->getMinItems()
+                $propertyMinItems
             ));
         }
     }

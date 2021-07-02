@@ -12,6 +12,7 @@ class ParameterTypeEnum
     public const INTEGER = 'integer';
     public const NUMBER = 'number';
     public const STRING = 'string';
+    public const OBJECT = 'object';
 
     /**
      * @return array

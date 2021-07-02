@@ -21,7 +21,7 @@ abstract class AbstractMergeStrategy implements MergeStrategyInterface
     /**
      * {@inheritdoc}
      */
-    abstract public function addParameter(string $parameterSource, string $name, array $data, bool $isRequired);
+    abstract public function addParameter(string $parameterSource, string $name, object $data, bool $isRequired);
 
     /**
      * {@inheritdoc}

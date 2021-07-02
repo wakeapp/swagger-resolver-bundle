@@ -12,7 +12,7 @@ class StrictMergeStrategy extends AbstractMergeStrategy
     /**
      * {@inheritdoc}
      */
-    public function addParameter(string $parameterSource, string $name, array $data, bool $isRequired)
+    public function addParameter(string $parameterSource, string $name, object $data, bool $isRequired)
     {
         if (isset($this->parameters[$name])) {
             throw new RuntimeException(sprintf(

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Configuration;
 
-use EXSyst\Component\Swagger\Schema;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\DefinitionNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\OperationNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\PathNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\MergeStrategyInterface;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
+use OpenApi\Annotations\Schema;
 
 /**
  * @author Viktor Linkin <adrenalinkin@gmail.com>

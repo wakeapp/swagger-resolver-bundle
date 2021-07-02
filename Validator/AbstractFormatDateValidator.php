@@ -6,8 +6,10 @@ namespace Linkin\Bundle\SwaggerResolverBundle\Validator;
 
 use DateTime;
 use Exception;
-use EXSyst\Component\Swagger\Schema;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Generator;
 use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
+
 use function preg_match;
 use function sprintf;
 
@@ -16,21 +18,25 @@ abstract class AbstractFormatDateValidator implements SwaggerValidatorInterface
     /**
      * {@inheritdoc}
      */
-    public function supports(Schema $property, array $context = []): bool
+    public function supports(object $property, array $context = []): bool
     {
-        return $this->getSupportedFormatName() === $property->getFormat();
+        $propertyFormat = $property instanceof Parameter ? $property->schema->format : $property->format;
+
+        return $this->getSupportedFormatName() === $propertyFormat;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function validate(Schema $property, string $propertyName, $value): void
+    public function validate(object $property, string $propertyName, $value): void
     {
         if (empty($value)) {
             return;
         }
 
-        if (null === $property->getPattern()) {
+        $propertyPattern = $property instanceof Parameter ? $property->schema->pattern : $property->pattern;
+
+        if (Generator::UNDEFINED === $propertyPattern) {
             $this->validateDatePattern($propertyName, $value);
         }
 

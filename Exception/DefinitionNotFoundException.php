@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Linkin\Bundle\SwaggerResolverBundle\Exception;
 
 use RuntimeException;
+
 use function sprintf;
 
 class DefinitionNotFoundException extends RuntimeException

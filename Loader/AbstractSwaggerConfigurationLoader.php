@@ -4,31 +4,26 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 
-use EXSyst\Component\Swagger\Collections\Definitions;
-use EXSyst\Component\Swagger\Operation as EXSystOperation;
-use OpenApi\Annotations\Operation as OpenApiOperation;
-use EXSyst\Component\Swagger\Parameter;
-use EXSyst\Component\Swagger\Path;
-use EXSyst\Component\Swagger\Schema as EXSystSchema;
-use OpenApi\Annotations\Schema as OpenApiSchema;
-use EXSyst\Component\Swagger\Swagger;
+use Exception;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\PathNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
-use OpenApi\Analysis;
-use OpenApi\Annotations\Components;
+use OpenApi\Annotations\MediaType;
 use OpenApi\Annotations\OpenApi;
+use OpenApi\Annotations\Operation;
 use OpenApi\Annotations\PathItem;
+use OpenApi\Annotations\RequestBody;
+use OpenApi\Annotations\Schema as OpenApiSchema;
+use OpenApi\Generator;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\Routing\RouterInterface;
+
 use function end;
 use function explode;
 
 abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfigurationLoaderInterface
 {
-    private const SCHEMA_UNDEFINED = '@OA\Generator::UNDEFINED🙈';
-
     /**
      * @var SchemaDefinitionCollection
      */
@@ -145,10 +140,11 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
     /**
      * Register collection according to loaded Swagger object
+     * @throws Exception
      */
     private function registerCollections(): void
     {
-        $swaggerConfiguration = $this->loadConfiguration();
+        $openApiConfiguration = $this->loadConfiguration();
 
         $definitionCollection = new SchemaDefinitionCollection();
         $operationCollection = new SchemaOperationCollection();
@@ -156,37 +152,43 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
         $methodList = ['get', 'post', 'put', 'delete', 'options', 'patch'];
 
         /** @var OpenApiSchema $schema */
-        foreach ($swaggerConfiguration->components->schemas as $schema) {
-            $definitionCollection->addSchema($schema->schema, $this->serializeOpenApiSchemaToEXSystSchema($schema));
+        foreach ($openApiConfiguration->components->schemas as $schema) {
+            $definitionCollection->addSchema($schema->schema, $schema);
         }
 
-        /** @var PathItem $pathObject */
-        foreach ($swaggerConfiguration->paths as $pathObject) {
-            $path = $pathObject->path;
+        /** @var PathItem $pathItem */
+        foreach ($openApiConfiguration->paths as $pathItem) {
+            $path = $pathItem->path;
 
-            /** @var OpenApiOperation $operation */
-            foreach ($pathObject as $methodKey => $operation) {
-                foreach ($methodList as $method) {
-                    if ($methodKey === $method && gettype($operation) !== 'string') {
-                        $eXSystOperation = $this->serializeOpenApiOperationToEXSystOperation($operation);
-                        $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($methodKey), $path));
+            foreach ($methodList as $method) {
+                /** @var Operation $openApiOperation */
+                $openApiOperation = $pathItem->$method;
 
-                        $schema = $this->parameterMerger->merge($eXSystOperation, new Definitions());
-                        $operationCollection->addSchema($routeName, $method, $schema);
+                if ($openApiOperation instanceof Operation) {
+                    $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
+                    $schema = $this->parameterMerger->merge($openApiOperation, $definitionCollection->getIterator());
+                    $operationCollection->addSchema($routeName, $method, $schema);
 
-                        /** @var Parameter $parameter */
-                        foreach ($eXSystOperation->getParameters()->getIterator() as $name => $parameter) {
-                            $ref = $parameter->getSchema()->getRef();
+                    /** @var RequestBody $requestBody */
+                    $requestBody = $openApiOperation->requestBody === Generator::UNDEFINED ?
+                        null : $openApiOperation->requestBody
+                    ;
 
-                            if (!$ref) {
-                                continue;
-                            }
+                    if ($requestBody) {
+                        $contentList = $requestBody->content === Generator::UNDEFINED ? [] : $requestBody->content;
 
-                            $explodedName = explode('/', $ref);
-                            $definitionName = end($explodedName);
+                        /** @var MediaType $mediaType */
+                        foreach ($contentList as $mediaType) {
+                            $schema = $mediaType->schema;
+                            $ref = $schema->ref === Generator::UNDEFINED ? null : $schema->ref;
 
-                            foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
-                                $operationCollection->addSchemaResource($routeName, $fileResource);
+                            if ($ref) {
+                                $explodedName = explode('/', $ref);
+                                $definitionName = end($explodedName);
+
+                                foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
+                                    $operationCollection->addSchemaResource($routeName, $fileResource);
+                                }
                             }
                         }
                     }
@@ -201,47 +203,5 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
         $this->definitionCollection = $definitionCollection;
         $this->operationCollection = $operationCollection;
-    }
-
-    /**
-     * @param OpenApiSchema $schema
-     * @return EXSystSchema
-     */
-    private function serializeOpenApiSchemaToEXSystSchema(OpenApiSchema $schema): EXSystSchema
-    {
-        $eXSystSchema = new EXSystSchema();
-
-        $eXSystSchema->setDiscriminator($this->setNullOpenApiSchemeProperty($schema->discriminator));
-        $eXSystSchema->setReadOnly($this->setNullOpenApiSchemeProperty($schema->readOnly));
-        $eXSystSchema->setTitle($this->setNullOpenApiSchemeProperty($schema->title));
-        $eXSystSchema->setExample($this->setNullOpenApiSchemeProperty($schema->example));
-        $eXSystSchema->setRequired($this->setNullOpenApiSchemeProperty($schema->required));
-
-        return $eXSystSchema;
-    }
-
-    /**
-     * @param OpenApiOperation $operation
-     * @return EXSystOperation
-     */
-    private function serializeOpenApiOperationToEXSystOperation(OpenApiOperation $operation): EXSystOperation
-    {
-        $eXSystOperation = new EXSystOperation();
-
-        $eXSystOperation->setDeprecated($this->setNullOpenApiSchemeProperty($operation->deprecated));
-        $eXSystOperation->setOperationId($this->setNullOpenApiSchemeProperty($operation->operationId));
-        $eXSystOperation->setDescription($this->setNullOpenApiSchemeProperty($operation->description));
-        $eXSystOperation->setSummary($this->setNullOpenApiSchemeProperty($operation->summary));
-
-        return $eXSystOperation;
-    }
-
-    /**
-     * @param mixed $property
-     * @return mixed
-     */
-    private function setNullOpenApiSchemeProperty($property)
-    {
-        return $property === self::SCHEMA_UNDEFINED ? null : $property;
     }
 }

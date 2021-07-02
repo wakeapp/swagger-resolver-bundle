@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Linkin\Bundle\SwaggerResolverBundle\Collection;
 
 use ArrayIterator;
-use EXSyst\Component\Swagger\Schema;
 use IteratorAggregate;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\OperationNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\PathNotFoundException;
+use OpenApi\Annotations\Schema;
 use Symfony\Component\Config\Resource\FileResource;
 
 class SchemaOperationCollection implements IteratorAggregate

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Validator;
 
-use EXSyst\Component\Swagger\Schema;
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterTypeEnum;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Generator;
 use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
+
 use function preg_match;
 use function sprintf;
 use function trim;
@@ -16,17 +18,21 @@ class StringPatternValidator implements SwaggerValidatorInterface
     /**
      * {@inheritdoc}
      */
-    public function supports(Schema $property, array $context = []): bool
+    public function supports(object $property, array $context = []): bool
     {
-        return ParameterTypeEnum::STRING === $property->getType() && null !== $property->getPattern();
+        $propertyType = $property instanceof Parameter ? $property->schema->type : $property->type;
+        $propertyPattern = $property instanceof Parameter ? $property->schema->pattern : $property->pattern;
+
+        return ParameterTypeEnum::STRING === $propertyType && Generator::UNDEFINED !== $propertyPattern;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function validate(Schema $property, string $propertyName, $value): void
+    public function validate(object $property, string $propertyName, $value): void
     {
-        $pattern = sprintf('/%s/', trim($property->getPattern(), '/'));
+        $propertyPattern = $property instanceof Parameter ? $property->schema->pattern : $property->pattern;
+        $pattern = sprintf('/%s/', trim($propertyPattern, '/'));
 
         if (!preg_match($pattern, $value)) {
             throw new InvalidOptionsException(sprintf(

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Linkin\Bundle\SwaggerResolverBundle\Configuration;
 
-use EXSyst\Component\Swagger\Path;
-use EXSyst\Component\Swagger\Schema;
+use JsonException;
 use Linkin\Bundle\SwaggerResolverBundle\Loader\SwaggerConfigurationLoaderInterface;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Annotations\Property;
+use OpenApi\Annotations\Schema;
+use OpenApi\Generator;
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Config\ConfigCacheFactory;
@@ -15,10 +18,12 @@ use Symfony\Component\Config\ConfigCacheInterface;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\HttpKernel\CacheWarmer\WarmableInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+
 use function json_decode;
-use function json_encode;
 use function md5;
 use function sprintf;
+
+use const JSON_THROW_ON_ERROR;
 use const PHP_SAPI;
 
 class SwaggerCachedConfiguration extends SwaggerConfiguration implements WarmableInterface
@@ -150,7 +155,6 @@ class SwaggerCachedConfiguration extends SwaggerConfiguration implements Warmabl
 
         $operationCollection = $this->loader->getSchemaOperationCollection();
 
-        /** @var Path $pathObject */
         foreach ($operationCollection as $routeName => $methodList) {
             foreach ($methodList as $method => $operation) {
                 $this->getPathDefinition($routeName, $method);
@@ -190,6 +194,7 @@ class SwaggerCachedConfiguration extends SwaggerConfiguration implements Warmabl
     /**
      * @param string $definitionName
      * @param ConfigCacheInterface $cache
+     * @throws JsonException
      */
     private function dumpDefinition(string $definitionName, ConfigCacheInterface $cache): void
     {
@@ -204,6 +209,7 @@ class SwaggerCachedConfiguration extends SwaggerConfiguration implements Warmabl
      * @param string $routeName
      * @param string $method
      * @param ConfigCacheInterface $cache
+     * @throws JsonException
      */
     private function dumpOperation(string $routeName, string $method, ConfigCacheInterface $cache): void
     {
@@ -218,6 +224,7 @@ class SwaggerCachedConfiguration extends SwaggerConfiguration implements Warmabl
      * @param Schema $schema
      * @param FileResource[] $resources
      * @param ConfigCacheInterface $cache
+     * @throws JsonException
      */
     private function dumpSchema(Schema $schema, array $resources, ConfigCacheInterface $cache): void
     {
@@ -226,17 +233,64 @@ class SwaggerCachedConfiguration extends SwaggerConfiguration implements Warmabl
 
 declare(strict_types=1);
 
-use EXSyst\Component\Swagger\Schema;
+use OpenApi\Annotations\Schema;
+use OpenApi\Annotations\Property;
+use OpenApi\Annotations\Parameter;
 
-return new Schema(%s);
+\$propertyObjectList = [];
+\$propertyList = %s;
+\$parameterList = %s;
+
+foreach (\$propertyList as \$property) {
+\$propertyObjectList['properties'][] = new Property(\$property);
+}
+
+foreach (\$parameterList as \$name => \$parameter) {
+\$parameterSchema = new Schema(\$parameter['schema']);
+unset(\$parameter['schema']);
+
+\$propertyObjectList['properties'][\$name] = new Parameter(\$parameter + ['schema' => \$parameterSchema]);
+}
+
+\$arguments = %s + \$propertyObjectList;
+return new Schema(\$arguments);
 
 EOF;
 
-        // to avoid problem with unexpected stdClass
-        $definitionAsArray = json_decode(json_encode($schema->toArray()), true);
-        $definitionExport = var_export($definitionAsArray, true);
+        $propertyList = [];
+        $parameterList = [];
 
-        $cache->write(sprintf($template, $definitionExport), $resources);
+        foreach ($schema->properties as $property) {
+            if ($property instanceof Property) {
+                $propertyList[$property->property] = json_decode($property->toJson(), true, 512, JSON_THROW_ON_ERROR);
+            }
+
+            if ($property instanceof Parameter) {
+                $parameterList[$property->name] = json_decode($property->toJson(), true, 512, JSON_THROW_ON_ERROR);
+            }
+        }
+
+        $schema->properties = Generator::UNDEFINED;
+        $actualPropertyList = [];
+
+        foreach ($propertyList as $name => $property) {
+            if (isset($property['$ref'])) {
+                $actualPropertyList[] = ['ref' => $property['$ref'], 'property' => $name];
+
+                continue;
+            }
+
+            $actualPropertyList[] = $property;
+        }
+
+        // to avoid problem with unexpected stdClass
+        $definitionAsArray = json_decode($schema->toJson(), true, 512, JSON_THROW_ON_ERROR);
+
+        $definitionExport = var_export($definitionAsArray, true);
+        $propertiesExport = var_export($actualPropertyList, true);
+        $parametersExport = var_export($parameterList, true);
+
+        $cache->write(sprintf($template, $propertiesExport, $parametersExport, $definitionExport), $resources);
     }
 
     /**

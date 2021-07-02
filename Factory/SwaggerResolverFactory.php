@@ -9,6 +9,7 @@ use Linkin\Bundle\SwaggerResolverBundle\Configuration\SwaggerConfigurationInterf
 use Linkin\Bundle\SwaggerResolverBundle\Resolver\SwaggerResolver;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
+
 use function end;
 use function explode;
 use function strtolower;
