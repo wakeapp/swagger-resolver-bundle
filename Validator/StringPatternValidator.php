@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Validator;
 
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterTypeEnum;
@@ -13,6 +22,9 @@ use function preg_match;
 use function sprintf;
 use function trim;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 class StringPatternValidator implements SwaggerValidatorInterface
 {
     /**
