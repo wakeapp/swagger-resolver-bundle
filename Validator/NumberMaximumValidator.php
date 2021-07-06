@@ -51,6 +51,8 @@ class NumberMaximumValidator implements SwaggerValidatorInterface
             $property->exclusiveMaximum
         ;
 
+        $exclusiveMaximum = $exclusiveMaximum === Generator::UNDEFINED ? false : $exclusiveMaximum;
+
         if ($exclusiveMaximum && $value >= $maximum) {
             throw new InvalidOptionsException(sprintf('%s strictly lower than %s', $message, $maximum));
         }

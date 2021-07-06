@@ -51,6 +51,8 @@ class NumberMinimumValidator implements SwaggerValidatorInterface
             $property->exclusiveMinimum
         ;
 
+        $exclusiveMinimum = $exclusiveMinimum === Generator::UNDEFINED ? false : $exclusiveMinimum;
+
 
         if ($exclusiveMinimum && $value <= $minimum) {
             throw new InvalidOptionsException(sprintf('%s strictly greater than %s', $message, $minimum));
