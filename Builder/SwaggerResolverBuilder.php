@@ -199,7 +199,7 @@ class SwaggerResolverBuilder
         }
 
         if (ParameterTypeEnum::ARRAY === $attributeType) {
-            $allowedTypes[] = null === $property->collectionFormat ? 'array' : 'string';
+            $allowedTypes[] = Generator::UNDEFINED === $property->collectionFormat ? 'array' : 'string';
 
             return $allowedTypes;
         }
