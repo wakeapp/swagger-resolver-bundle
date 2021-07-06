@@ -46,12 +46,16 @@ class NumberMaximumValidator implements SwaggerValidatorInterface
     {
         $message = sprintf('Property "%s" value should be', $propertyName);
         $maximum = $property instanceof Parameter ? $property->schema->maximum : $property->maximum;
+        $exclusiveMaximum = $property instanceof Parameter ?
+            $property->schema->exclusiveMaximum :
+            $property->exclusiveMaximum
+        ;
 
-        if ($property->exclusiveMaximum && $value >= $maximum) {
+        if ($exclusiveMaximum && $value >= $maximum) {
             throw new InvalidOptionsException(sprintf('%s strictly lower than %s', $message, $maximum));
         }
 
-        if (!$property->exclusiveMaximum && $value > $maximum) {
+        if (!$exclusiveMaximum && $value > $maximum) {
             throw new InvalidOptionsException(sprintf('%s lower than or equal to %s', $message, $maximum));
         }
     }
