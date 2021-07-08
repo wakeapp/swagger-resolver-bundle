@@ -169,6 +169,11 @@ class SwaggerResolverBuilder
     private function getAllowedTypes(object $property): ?array
     {
         $attributeType = $property instanceof Parameter ? $property->schema->type : $property->type;
+        $collectionFormat = $property instanceof Parameter ?
+            $property->schema->collectionFormat :
+            $property->collectionFormat
+        ;
+
         $allowedTypes = [];
 
         if (ParameterTypeEnum::STRING === $attributeType) {
@@ -199,7 +204,7 @@ class SwaggerResolverBuilder
         }
 
         if (ParameterTypeEnum::ARRAY === $attributeType) {
-            $allowedTypes[] = Generator::UNDEFINED === $property->collectionFormat ? 'array' : 'string';
+            $allowedTypes[] = Generator::UNDEFINED === $collectionFormat ? 'array' : 'string';
 
             return $allowedTypes;
         }
