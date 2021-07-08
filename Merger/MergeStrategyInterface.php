@@ -2,8 +2,20 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Merger;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 interface MergeStrategyInterface
 {
     /**
@@ -11,10 +23,10 @@ interface MergeStrategyInterface
      *
      * @param string $parameterSource
      * @param string $name
-     * @param array $data
+     * @param object $data
      * @param bool $isRequired
      */
-    public function addParameter(string $parameterSource, string $name, array $data, bool $isRequired);
+    public function addParameter(string $parameterSource, string $name, object $data, bool $isRequired);
 
     /**
      * Returns list of collected parameters

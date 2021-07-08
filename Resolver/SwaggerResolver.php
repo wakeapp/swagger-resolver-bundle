@@ -2,13 +2,29 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Resolver;
 
-use EXSyst\Component\Swagger\Schema;
 use Linkin\Bundle\SwaggerResolverBundle\Validator\SwaggerValidatorInterface;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Annotations\Property;
+use OpenApi\Annotations\Schema;
+use OpenApi\Generator;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+
 use function get_class;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 class SwaggerResolver extends OptionsResolver
 {
     /**
@@ -38,11 +54,11 @@ class SwaggerResolver extends OptionsResolver
      */
     public function clear(): self
     {
-         parent::clear();
+        parent::clear();
 
-         $this->validators = [];
+        $this->validators = [];
 
-         return $this;
+        return $this;
     }
 
     /**
@@ -51,15 +67,36 @@ class SwaggerResolver extends OptionsResolver
     public function offsetGet($option, bool $triggerDeprecation = true)
     {
         $resolvedValue = parent::offsetGet($option, $triggerDeprecation);
-        $property = $this->schema->getProperties()->get($option);
 
-        foreach ($this->validators as $validator) {
-            if ($validator->supports($property)) {
-                $validator->validate($property, $option, $resolvedValue);
+        $properties = $this->schema->properties === Generator::UNDEFINED ? [] : $this->schema->properties;
+        $property = new Property([]);
+
+        /** @var object $propertySchema */
+        foreach ($properties as $propertySchema) {
+            if ($propertySchema instanceof Property && $propertySchema->property === $option) {
+                $property = $propertySchema;
+
+                break;
+            }
+
+            if ($propertySchema instanceof Parameter && $propertySchema->name === $option) {
+                $property = $propertySchema;
+
+                break;
             }
         }
 
-        return $resolvedValue;
+        if ($this->validators) {
+            foreach ($this->validators as $validator) {
+                if ($validator->supports($property)) {
+                    $validator->validate($property, $option, $resolvedValue);
+                }
+            }
+
+            return $resolvedValue;
+        }
+
+        return $resolvedValue ?? null;
     }
 
     /**

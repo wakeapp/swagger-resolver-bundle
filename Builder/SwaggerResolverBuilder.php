@@ -2,17 +2,34 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Builder;
 
-use EXSyst\Component\Swagger\Schema;
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterTypeEnum;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\UndefinedPropertyTypeException;
 use Linkin\Bundle\SwaggerResolverBundle\Normalizer\SwaggerNormalizerInterface;
 use Linkin\Bundle\SwaggerResolverBundle\Resolver\SwaggerResolver;
 use Linkin\Bundle\SwaggerResolverBundle\Validator\SwaggerValidatorInterface;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Annotations\Property;
+use OpenApi\Annotations\Schema;
+use OpenApi\Generator;
+
+use function count;
 use function in_array;
 use function is_array;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 class SwaggerResolverBuilder
 {
     /**
@@ -54,43 +71,52 @@ class SwaggerResolverBuilder
     {
         $swaggerResolver = new SwaggerResolver($definition);
 
-        $requiredProperties = $definition->getRequired();
+        $requiredProperties = $definition->required;
 
         if (is_array($requiredProperties)) {
             $swaggerResolver->setRequired($requiredProperties);
         }
 
-        $propertiesCount = $definition->getProperties()->getIterator()->count();
+        $properties = $definition->properties === Generator::UNDEFINED ? [] : $definition->properties;
+        $propertiesCount = count($properties);
 
         if (0 === $propertiesCount) {
             return $swaggerResolver;
         }
 
-        /** @var Schema $propertySchema */
-        foreach ($definition->getProperties() as $name => $propertySchema) {
-            $swaggerResolver->setDefined($name);
+        /** @var Property | Parameter $property */
+        foreach ($properties as $property) {
+            $attributeName = $property instanceof Parameter ? $property->name : $property->property;
+            $swaggerResolver->setDefined($attributeName);
 
-            $allowedTypes = $this->getAllowedTypes($propertySchema);
+            $allowedTypes = $this->getAllowedTypes($property);
 
             if (null === $allowedTypes) {
-                $propertyType = $propertySchema->getType() ?? '';
+                $attributeType = $property instanceof Parameter ? $property->schema->type : $property->type;
+                $attributeType = $attributeType ?? '';
 
-                throw new UndefinedPropertyTypeException($definitionName, $name, $propertyType);
+                throw new UndefinedPropertyTypeException($definitionName, $property->property, $attributeType);
             }
 
-            if (!$swaggerResolver->isRequired($name)) {
+            if (!$swaggerResolver->isRequired($attributeName)) {
                 $allowedTypes[] = 'null';
             }
 
-            $swaggerResolver->setAllowedTypes($name, $allowedTypes);
-            $swaggerResolver = $this->addNormalization($swaggerResolver, $name, $propertySchema);
+            $swaggerResolver->setAllowedTypes($attributeName, $allowedTypes);
+            $swaggerResolver = $this->addNormalization($swaggerResolver, $attributeName, $property);
 
-            if (null !== $propertySchema->getDefault()) {
-                $swaggerResolver->setDefault($name, $propertySchema->getDefault());
+            $attributeDefault = $property instanceof Parameter ? $property->schema->default : $property->default;
+            $default = $attributeDefault === Generator::UNDEFINED ? null : $attributeDefault;
+
+            if (null !== $default) {
+                $swaggerResolver->setDefault($attributeName, $default);
             }
 
-            if (!empty($propertySchema->getEnum())) {
-                $swaggerResolver->setAllowedValues($name, (array) $propertySchema->getEnum());
+            $attributeEnum = $property instanceof Parameter ? $property->schema->enum : $property->enum;
+            $enum = $attributeEnum === Generator::UNDEFINED ? [] : $attributeEnum;
+
+            if (!empty($enum)) {
+                $swaggerResolver->setAllowedValues($attributeName, (array) $enum);
             }
         }
 
@@ -104,25 +130,27 @@ class SwaggerResolverBuilder
     /**
      * @param SwaggerResolver $resolver
      * @param string $name
-     * @param Schema $propertySchema
+     * @param Property $property
      *
      * @return SwaggerResolver
      */
-    private function addNormalization(SwaggerResolver $resolver, string $name, Schema $propertySchema): SwaggerResolver
+    private function addNormalization(SwaggerResolver $resolver, string $name, object $property): SwaggerResolver
     {
+        $attributeLocation = $property instanceof Parameter ? $property->in : $property->title;
+
         /** @see \Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger parameter location in title */
-        if (!in_array($propertySchema->getTitle(), $this->normalizationLocations, true)) {
+        if (!in_array($attributeLocation, $this->normalizationLocations, true)) {
             return $resolver;
         }
 
         $isRequired = $resolver->isRequired($name);
 
         foreach ($this->swaggerNormalizers as $normalizer) {
-            if (!$normalizer->supports($propertySchema, $name, $isRequired)) {
+            if (!$normalizer->supports($property, $name, $isRequired)) {
                 continue;
             }
 
-            $closure = $normalizer->getNormalizer($propertySchema, $name, $isRequired);
+            $closure = $normalizer->getNormalizer($property, $name, $isRequired);
 
             return $resolver
                 ->setNormalizer($name, $closure)
@@ -134,57 +162,62 @@ class SwaggerResolverBuilder
     }
 
     /**
-     * @param Schema $propertySchema
+     * @param Property $property
      *
      * @return array
      */
-    private function getAllowedTypes(Schema $propertySchema): ?array
+    private function getAllowedTypes(object $property): ?array
     {
-        $propertyType = $propertySchema->getType();
+        $attributeType = $property instanceof Parameter ? $property->schema->type : $property->type;
+        $collectionFormat = $property instanceof Parameter ?
+            $property->schema->collectionFormat :
+            $property->collectionFormat
+        ;
+
         $allowedTypes = [];
 
-        if (ParameterTypeEnum::STRING === $propertyType) {
+        if (ParameterTypeEnum::STRING === $attributeType) {
             $allowedTypes[] = 'string';
 
             return $allowedTypes;
         }
 
-        if (ParameterTypeEnum::INTEGER === $propertyType) {
+        if (ParameterTypeEnum::INTEGER === $attributeType) {
             $allowedTypes[] = 'integer';
             $allowedTypes[] = 'int';
 
             return $allowedTypes;
         }
 
-        if (ParameterTypeEnum::BOOLEAN === $propertyType) {
+        if (ParameterTypeEnum::BOOLEAN === $attributeType) {
             $allowedTypes[] = 'boolean';
             $allowedTypes[] = 'bool';
 
             return $allowedTypes;
         }
 
-        if (ParameterTypeEnum::NUMBER === $propertyType) {
+        if (ParameterTypeEnum::NUMBER === $attributeType) {
             $allowedTypes[] = 'double';
             $allowedTypes[] = 'float';
 
             return $allowedTypes;
         }
 
-        if (ParameterTypeEnum::ARRAY === $propertyType) {
-            $allowedTypes[] = null === $propertySchema->getCollectionFormat() ? 'array' : 'string';
+        if (ParameterTypeEnum::ARRAY === $attributeType) {
+            $allowedTypes[] = Generator::UNDEFINED === $collectionFormat ? 'array' : 'string';
 
             return $allowedTypes;
         }
 
-        if ('object' === $propertyType) {
+        if ('object' === $attributeType) {
             $allowedTypes[] = 'object';
             $allowedTypes[] = 'array';
 
             return $allowedTypes;
         }
 
-        if (null === $propertyType && $propertySchema->getRef()) {
-            $ref = $propertySchema->getRef();
+        if (Generator::UNDEFINED === $attributeType && $property->ref) {
+            $ref = $property->ref;
 
             $allowedTypes[] = 'object';
             $allowedTypes[] = 'array';

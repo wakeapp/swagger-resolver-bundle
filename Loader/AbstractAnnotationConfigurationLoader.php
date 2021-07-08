@@ -2,21 +2,31 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
-use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\Config\Resource\FileResource;
-use Symfony\Component\Routing\Route;
-use Symfony\Component\Routing\RouterInterface;
+
 use function end;
 use function explode;
 use function get_declared_classes;
 use function reset;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 abstract class AbstractAnnotationConfigurationLoader extends AbstractSwaggerConfigurationLoader
 {
     /**

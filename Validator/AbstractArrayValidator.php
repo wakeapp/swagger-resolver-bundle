@@ -2,30 +2,46 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Validator;
 
-use EXSyst\Component\Swagger\Schema;
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterCollectionFormatEnum;
 use Linkin\Bundle\SwaggerResolverBundle\Enum\ParameterTypeEnum;
+use OpenApi\Annotations\Parameter;
+use OpenApi\Generator;
 use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
+
 use function explode;
 use function is_array;
 use function sprintf;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 abstract class AbstractArrayValidator implements SwaggerValidatorInterface
 {
     /**
      * {@inheritdoc}
      */
-    public function supports(Schema $property, array $context = []): bool
+    public function supports(object $property, array $context = []): bool
     {
-        return ParameterTypeEnum::ARRAY === $property->getType();
+        $propertyType = $property instanceof Parameter ? $property->schema->type : $property->type;
+
+        return ParameterTypeEnum::ARRAY === $propertyType;
     }
 
     /**
      * {@inheritdoc}
      */
-    abstract public function validate(Schema $property, string $propertyName, $value): void;
+    abstract public function validate(object $property, string $propertyName, $value): void;
 
     /**
      * @param string      $propertyName
@@ -40,7 +56,7 @@ abstract class AbstractArrayValidator implements SwaggerValidatorInterface
             return [];
         }
 
-        if (null === $collectionFormat) {
+        if (Generator::UNDEFINED === $collectionFormat) {
             if (is_array($value)) {
                 return $value;
             }

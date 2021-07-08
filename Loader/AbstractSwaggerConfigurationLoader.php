@@ -2,20 +2,38 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Loader;
 
-use EXSyst\Component\Swagger\Operation;
-use EXSyst\Component\Swagger\Parameter;
-use EXSyst\Component\Swagger\Path;
-use EXSyst\Component\Swagger\Swagger;
+use Exception;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaDefinitionCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Collection\SchemaOperationCollection;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\PathNotFoundException;
 use Linkin\Bundle\SwaggerResolverBundle\Merger\OperationParameterMerger;
+use OpenApi\Annotations\MediaType;
+use OpenApi\Annotations\OpenApi;
+use OpenApi\Annotations\Operation;
+use OpenApi\Annotations\PathItem;
+use OpenApi\Annotations\RequestBody;
+use OpenApi\Annotations\Schema as OpenApiSchema;
+use OpenApi\Generator;
+use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\Routing\RouterInterface;
+
 use function end;
 use function explode;
 
+/**
+ * @author Viktor Linkin <adrenalinkin@gmail.com>
+ */
 abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfigurationLoaderInterface
 {
     /**
@@ -80,9 +98,9 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
     /**
      * Load full configuration and returns Swagger object
      *
-     * @return Swagger
+     * @return OpenApi
      */
-    abstract protected function loadConfiguration(): Swagger;
+    abstract protected function loadConfiguration(): OpenApi;
 
     /**
      * Add file resources for swagger definitions
@@ -134,46 +152,65 @@ abstract class AbstractSwaggerConfigurationLoader implements SwaggerConfiguratio
 
     /**
      * Register collection according to loaded Swagger object
+     * @throws Exception
      */
     private function registerCollections(): void
     {
-        $swaggerConfiguration = $this->loadConfiguration();
+        $openApiConfiguration = $this->loadConfiguration();
 
         $definitionCollection = new SchemaDefinitionCollection();
         $operationCollection = new SchemaOperationCollection();
 
-        foreach ($swaggerConfiguration->getDefinitions()->getIterator() as $definitionName => $definition) {
-            $definitionCollection->addSchema($definitionName, $definition);
+        $methodList = ['get', 'post', 'put', 'delete', 'options', 'patch'];
+
+        /** @var OpenApiSchema $schema */
+        foreach ($openApiConfiguration->components->schemas as $schema) {
+            $definitionCollection->addSchema($schema->schema, $schema);
         }
 
-        $this->registerDefinitionResources($definitionCollection);
+        /** @var PathItem $pathItem */
+        foreach ($openApiConfiguration->paths as $pathItem) {
+            $path = $pathItem->path;
 
-        /** @var Path $pathObject */
-        foreach ($swaggerConfiguration->getPaths()->getIterator() as $path => $pathObject) {
-            /** @var Operation $operation */
-            foreach ($pathObject->getOperations() as $method => $operation) {
-                $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
-                $schema = $this->parameterMerger->merge($operation, $swaggerConfiguration->getDefinitions());
-                $operationCollection->addSchema($routeName, $method, $schema);
+            foreach ($methodList as $method) {
+                /** @var Operation $openApiOperation */
+                $openApiOperation = $pathItem->$method;
 
-                /** @var Parameter $parameter */
-                foreach ($operation->getParameters()->getIterator() as $name => $parameter) {
-                    $ref = $parameter->getSchema()->getRef();
+                if ($openApiOperation instanceof Operation) {
+                    $routeName = $this->getRouteNameByPath(sprintf('%s %s', strtolower($method), $path));
+                    $schema = $this->parameterMerger->merge($openApiOperation, $definitionCollection->getIterator());
+                    $operationCollection->addSchema($routeName, $method, $schema);
 
-                    if (!$ref) {
-                        continue;
-                    }
+                    /** @var RequestBody $requestBody */
+                    $requestBody = $openApiOperation->requestBody === Generator::UNDEFINED ?
+                        null : $openApiOperation->requestBody
+                    ;
 
-                    $explodedName = explode('/', $ref);
-                    $definitionName = end($explodedName);
+                    if ($requestBody) {
+                        $contentList = $requestBody->content === Generator::UNDEFINED ? [] : $requestBody->content;
 
-                    foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
-                        $operationCollection->addSchemaResource($routeName, $fileResource);
+                        /** @var MediaType $mediaType */
+                        foreach ($contentList as $mediaType) {
+                            $schema = $mediaType->schema;
+                            $ref = $schema->ref === Generator::UNDEFINED ? null : $schema->ref;
+
+                            if ($ref) {
+                                $explodedName = explode('/', $ref);
+                                $definitionName = end($explodedName);
+
+                                foreach ($definitionCollection->getSchemaResources($definitionName) as $fileResource) {
+                                    $operationCollection->addSchemaResource($routeName, $fileResource);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
+        $this->registerDefinitionResources($definitionCollection);
+
+        $operationCollection->addSchemaResource('/', new FileResource(''));
         $this->registerOperationResources($operationCollection);
 
         $this->definitionCollection = $definitionCollection;

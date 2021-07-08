@@ -2,12 +2,21 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the SwaggerResolverBundle package.
+ *
+ * (c) Viktor Linkin <adrenalinkin@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Linkin\Bundle\SwaggerResolverBundle\Collection;
 
 use ArrayIterator;
-use EXSyst\Component\Swagger\Schema;
 use IteratorAggregate;
 use Linkin\Bundle\SwaggerResolverBundle\Exception\DefinitionNotFoundException;
+use OpenApi\Annotations\Schema;
 use Symfony\Component\Config\Resource\FileResource;
 
 /**
